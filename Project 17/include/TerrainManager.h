@@ -8,14 +8,40 @@
 #include "OgreTerrain.h"
 #include "OgreTerrainPaging.h"
 #include "OgreTerrainGroup.h"
-#include "myTerrainMaterialGenerator.h"
+//#include "myTerrainMaterialGenerator.h"
 #include "xml/tinyxml.h"
 
+#include <stdio.h>
+#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+#include <iostream>
+#include <string>
+
+#include "OgreVolumeChunk.h"
+
+#include "OgreVolumeTextureSource.h"
+#include "OgreVolumeCSGSource.h"
+
+#include "OgreRay.h"
+
 using namespace Ogre;
+using namespace Ogre::Volume;
+
+#define TERRAIN_WORLD_SIZE 12000.0f
+#define TERRAIN_SIZE 513
 
 class MyTerrain
 {
   protected:
+
+	/// Holds the volume root.
+    Chunk *mVolumeRoot;
+    
+    /// The node on which the terrain is attached.
+    SceneNode *mVolumeRootNode;
+
     SceneManager    *mSceneMgr;
 
     Terrain       *mTerrain;
@@ -33,16 +59,17 @@ class MyTerrain
     String      m_sGroupName;
     String      m_sPrependNode;
   public:
-
+	/*
     MyTerrain::MyTerrain(SceneManager *sceneMgr, Light *l)
     {
       mSceneMgr = sceneMgr;
       light = l;
       parseScene("sc.scene", "Bootstrap", mSceneMgr, mSceneMgr->getRootSceneNode());
     }
+*/
 
   protected:
-
+/*
     void parseScene(const String &SceneName, const String &groupName, SceneManager *yourSceneMgr, SceneNode *pAttachNode)
     {
       // set up shared object values
@@ -101,9 +128,9 @@ class MyTerrain
       // Close the XML File
       delete XMLDoc;
     };
+	*/
 
-
-
+	  /*
     void MyTerrain::processTerrain(TiXmlElement* XMLNode)
     {
       Ogre::Real worldSize = Ogre::StringConverter::parseReal(getAttrib(XMLNode, "worldSize"));
@@ -149,7 +176,8 @@ class MyTerrain
       mTerrainGroup->loadAllTerrains(true);
       mTerrainGroup->freeTemporaryResources();
     }
-
+	*/
+	/*
     void MyTerrain::processTerrainPage(TiXmlElement* XMLNode)
     {
       Ogre::String name = getAttrib(XMLNode, "name");
@@ -161,8 +189,9 @@ class MyTerrain
         mTerrainGroup->defineTerrain(pageX, pageY, name);
       }
     }
-
+	*/
   protected:
+	  /*
     String getAttrib(TiXmlElement *XMLNode, const String &attrib, const String &defaultValue = "")
     {
       if(XMLNode->Attribute(attrib.c_str()))
@@ -174,29 +203,34 @@ class MyTerrain
         return defaultValue;
       }
     };
-
+	*/
   public:
+	//VolumeTerrain  
+	MyTerrain::MyTerrain(SceneManager *sceneMgr, String terName)
+	{
+		mSceneMgr = sceneMgr;
+		mVolumeRoot = OGRE_NEW Chunk();
+		mVolumeRootNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(terName);
+		Timer t;
+		mVolumeRoot->load(mSceneMgr->getSceneNode(terName), mSceneMgr, "volumeTerrain.cfg", true);
+		LogManager::getSingleton().stream() << "Loaded volume terrain in " << t.getMillisecondsCPU() << " ms";
+	}
+	//VolumeTerrain  delete
+	void MyTerrain::cleanupContent(void)
+	{   
+		delete mVolumeRoot->getChunkParameters()->src;
+		OGRE_DELETE mVolumeRoot;
+		mVolumeRoot = 0;
+	}
 
-    MyTerrain::MyTerrain(SceneManager *sceneMgr, String terName)
-    {
-      mSceneMgr = sceneMgr;
-      mUpdateCountDown = 0;
-      mTerrainGlobalOptions = OGRE_NEW TerrainGlobalOptions();
-      mTerrainGlobalOptions->setMaxPixelError(8);
-      mTerrainGlobalOptions->setCompositeMapDistance(2000);
-      mTerrainGlobalOptions->setLightMapDirection(Vector3(0, -1, 0));
-      mTerrainGlobalOptions->setCompositeMapAmbient(ColourValue(0.7, 0.7, 0.7));
-      mTerrainGlobalOptions->setCompositeMapDiffuse(ColourValue(0.7, 0.7, 0.7));
-      mTerrain = OGRE_NEW Ogre::Terrain(sceneMgr);
-      mTerrain->load(terName);
-    }
-    /*
-    MyTerrain::MyTerrain( SceneManager *sceneMgr, Light *l, bool hz)  :mTerrain(0)
+
+    
+    MyTerrain::MyTerrain( SceneManager *sceneMgr, Light *l)  :mTerrain(0)
     {
       mSceneMgr = sceneMgr;
       light = l;
 
-      bool loadTerrain = true;
+      bool loadTerrain = false;
       bool saveTerrain = true;
 
       mUpdateCountDown = 0;
@@ -302,7 +336,7 @@ class MyTerrain
       if(saveTerrain)
         mTerrain->save("terrain.dat");
     }
-
+	
     //создаёт теран по хейтмапу и сохраняет в файл.
     void MyTerrain::createTerrain()
     {
@@ -373,25 +407,16 @@ class MyTerrain
       mTerrain->freeTemporaryResources();
 
     }
-    */
-
-    MyTerrain::MyTerrain(SceneManager *sceneMgr, TerrainGroup *terrainGroup, Light *l)
-    {
-      mSceneMgr = sceneMgr;
-      mTerrainGroup = terrainGroup;
-      light = l;
-      mTerrain = mTerrainGroup->getTerrain(0, 0);
-    }
+  
 
     MyTerrain::~MyTerrain()
     {
-      //    if( mTerrainPaging)
-      //    {
-      //      OGRE_DELETE mTerrainPaging;
-      //      OGRE_DELETE mPageManager;
-      //    }
-      //    else
-      if(mTerrainGroup)
+      if( mTerrainPaging)
+      {
+		OGRE_DELETE mTerrainPaging;
+		OGRE_DELETE mPageManager;
+      }
+      else if(mTerrainGroup)
       {
         OGRE_DELETE mTerrainGroup;
       }

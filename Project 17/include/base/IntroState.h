@@ -4,11 +4,24 @@
 #include <OgreOverlay.h>
 #include <OgreOverlaySystem.h>
 
+#include "myOgreSdk.h"
+#include "OgreCharacterController.h"
+
 #include "base/GameManager.h"
 #include "base/GameState.h"
 #include "base/PauseState.h"
 #include "base/PlayState.h"
 #include "base/IntroState.h"
+
+#include "ExtendedCamera.h"
+
+#include "TerrainManager.h"
+
+#include "SkyManager.h"
+
+#include "SceneLoader.h"
+
+#include "SharedData.h"
 
 using namespace Ogre;
 
@@ -45,6 +58,14 @@ class IntroState : public GameState, public RenderTargetListener
     Ogre::SceneManager* mSceneMgr;
     Ogre::Viewport* mViewport;
     Ogre::Camera* mCamera;
+	
+	ExtendedCamera *ExtCamera;
+
+	myOgreSdk		*myOgSdk;
+	SinbadCharacterController	*Char;
+
+	SkyManager      *Sky;
+	MyTerrain		*Terrain;
 
 	Ogre::OverlaySystem  *mOverlaySystem;
     Ogre::OverlayManager *mOverlayMgr;
